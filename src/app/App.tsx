@@ -32,6 +32,7 @@ type TaskPriority = "alta" | "media" | "baixa";
 type WidgetId = "newTask" | "board" | "agenda" | "reports";
 type Accent = "cyan" | "violet" | "emerald" | "rose";
 type Density = "compacta" | "confortavel";
+type BackgroundPreset = "aurora" | "workspace" | "city" | "minimal";
 
 type Task = {
   id: string;
@@ -49,8 +50,10 @@ const SETTINGS_KEY = "dashboard-g-pro-settings";
 type DashboardSettings = {
   visibleWidgets: Record<WidgetId, boolean>;
   widgetOrder: WidgetId[];
+  widgetAccents: Record<WidgetId, Accent>;
   accent: Accent;
   density: Density;
+  background: BackgroundPreset;
 };
 
 const defaultSettings: DashboardSettings = {
@@ -61,8 +64,15 @@ const defaultSettings: DashboardSettings = {
     reports: true,
   },
   widgetOrder: ["newTask", "board", "agenda", "reports"],
+  widgetAccents: {
+    newTask: "cyan",
+    board: "violet",
+    agenda: "emerald",
+    reports: "rose",
+  },
   accent: "cyan",
   density: "confortavel",
+  background: "aurora",
 };
 
 const widgetLabels: Record<WidgetId, string> = {
@@ -77,6 +87,29 @@ const accentThemes: Record<Accent, { label: string; color: string; soft: string 
   violet: { label: "Violeta", color: "#a78bfa", soft: "rgba(167,139,250,0.14)" },
   emerald: { label: "Verde", color: "#6ee7b7", soft: "rgba(110,231,183,0.14)" },
   rose: { label: "Rosa", color: "#fda4af", soft: "rgba(253,164,175,0.14)" },
+};
+
+const backgroundPresets: Record<BackgroundPreset, { label: string; image: string }> = {
+  aurora: {
+    label: "Aurora",
+    image:
+      "radial-gradient(circle at 18% 12%, rgba(34,211,238,0.18), transparent 28%), radial-gradient(circle at 82% 4%, rgba(132,92,246,0.16), transparent 30%), linear-gradient(135deg, rgba(8,13,28,0.98), rgba(3,7,18,1))",
+  },
+  workspace: {
+    label: "Workspace",
+    image:
+      "linear-gradient(rgba(3,7,18,0.82), rgba(3,7,18,0.94)), url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=80')",
+  },
+  city: {
+    label: "Cidade",
+    image:
+      "linear-gradient(rgba(3,7,18,0.78), rgba(3,7,18,0.94)), url('https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1800&q=80')",
+  },
+  minimal: {
+    label: "Minimal",
+    image:
+      "linear-gradient(135deg, rgba(2,6,23,1), rgba(15,23,42,1) 48%, rgba(8,13,28,1))",
+  },
 };
 
 const initialTasks: Task[] = [
@@ -333,6 +366,35 @@ function CustomizationPanel({
 
       <div className="mt-4">
         <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-500">
+          Imagem de fundo
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {(Object.keys(backgroundPresets) as BackgroundPreset[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() =>
+                setSettings((current) => ({ ...current, background: key }))
+              }
+              className={`h-16 overflow-hidden rounded-2xl border p-2 text-left text-xs font-black transition ${
+                settings.background === key
+                  ? "border-white/70 text-white"
+                  : "border-white/10 text-slate-400 hover:border-white/30"
+              }`}
+              style={{
+                backgroundImage: backgroundPresets[key].image,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              {backgroundPresets[key].label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-500">
           Densidade
         </p>
         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -376,6 +438,26 @@ function CustomizationPanel({
               >
                 {widgetLabels[id]}
               </button>
+              <select
+                value={settings.widgetAccents[id]}
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    widgetAccents: {
+                      ...current.widgetAccents,
+                      [id]: event.target.value as Accent,
+                    },
+                  }))
+                }
+                className="h-7 rounded-lg border border-white/10 bg-slate-950 px-1 text-[0.65rem] font-bold text-slate-300 outline-none"
+                aria-label={`Cor do widget ${widgetLabels[id]}`}
+              >
+                {(Object.keys(accentThemes) as Accent[]).map((accent) => (
+                  <option key={accent} value={accent}>
+                    {accentThemes[accent].label}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
                 disabled={index === 0}
@@ -512,6 +594,12 @@ function PersonalizedDashboard({
         <div
           key={id}
           className={id === "board" ? "xl:col-span-2" : undefined}
+          style={
+            {
+              "--accent": accentThemes[settings.widgetAccents[id]].color,
+              "--accent-soft": accentThemes[settings.widgetAccents[id]].soft,
+            } as CSSProperties
+          }
         >
           {widgets[id]}
         </div>
@@ -561,11 +649,16 @@ export default function App() {
           ...defaultSettings.visibleWidgets,
           ...parsed.visibleWidgets,
         },
+        widgetAccents: {
+          ...defaultSettings.widgetAccents,
+          ...parsed.widgetAccents,
+        },
         widgetOrder: parsed.widgetOrder?.length
           ? parsed.widgetOrder.filter((id): id is WidgetId => id in widgetLabels)
           : defaultSettings.widgetOrder,
         accent: parsed.accent ?? defaultSettings.accent,
         density: parsed.density ?? defaultSettings.density,
+        background: parsed.background ?? defaultSettings.background,
       });
     } catch {
       window.localStorage.removeItem(SETTINGS_KEY);
@@ -692,6 +785,7 @@ export default function App() {
   const activeTitle = navItems.find((item) => item.id === activeView)?.label;
   const accent = accentThemes[settings.accent];
   const panelGap = settings.density === "compacta" ? "mt-4 gap-4" : "mt-5 gap-5";
+  const background = backgroundPresets[settings.background];
 
   return (
     <main
@@ -704,7 +798,10 @@ export default function App() {
       }
     >
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(34,211,238,0.18),transparent_28%),radial-gradient(circle_at_82%_4%,rgba(132,92,246,0.16),transparent_30%),linear-gradient(135deg,rgba(8,13,28,0.98),rgba(3,7,18,1))]" />
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: background.image }}
+        />
         <div className="absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:48px_48px]" />
       </div>
 
@@ -900,7 +997,9 @@ function NewTaskPanel({
   addTask: () => void;
 }) {
   return (
-    <section className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+    <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045]">
+      <div className="h-1 bg-[var(--accent)]" />
+      <div className="p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-black">Nova tarefa</h2>
@@ -1022,6 +1121,7 @@ function NewTaskPanel({
           painel destaca o que ainda consome horas.
         </p>
       </div>
+      </div>
     </section>
   );
 }
@@ -1092,7 +1192,9 @@ function TasksBoard({
   deleteTask: (id: string) => void;
 }) {
   return (
-    <section className="min-w-0 rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+    <section className="min-w-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045]">
+      <div className="h-1 bg-[var(--accent)]" />
+      <div className="p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-lg font-black">Quadro de tarefas</h2>
@@ -1152,6 +1254,7 @@ function TasksBoard({
           );
         })}
       </div>
+      </div>
     </section>
   );
 }
@@ -1166,7 +1269,9 @@ function AgendaMiniWidget({
   const openTasks = tasks.filter((task) => task.status !== "done").slice(0, 5);
 
   return (
-    <section className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+    <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045]">
+      <div className="h-1 bg-[var(--accent)]" />
+      <div className="p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-black">Agenda</h2>
@@ -1206,6 +1311,7 @@ function AgendaMiniWidget({
           </div>
         )}
       </div>
+      </div>
     </section>
   );
 }
@@ -1226,7 +1332,9 @@ function ReportsMiniWidget({
   };
 }) {
   return (
-    <section className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+    <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045]">
+      <div className="h-1 bg-[var(--accent)]" />
+      <div className="p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-black">Relatorios</h2>
@@ -1259,6 +1367,7 @@ function ReportsMiniWidget({
           className="h-full rounded-full bg-[var(--accent)]"
           style={{ width: `${stats.progress}%` }}
         />
+      </div>
       </div>
     </section>
   );
