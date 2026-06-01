@@ -1,5 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
 import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
+import {
+  ArrowDown,
+  ArrowUp,
   BarChart3,
   CalendarDays,
   CheckCircle2,
@@ -11,6 +21,7 @@ import {
   LayoutDashboard,
   Plus,
   Search,
+  Settings2,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -18,6 +29,9 @@ import {
 type View = "painel" | "tarefas" | "agenda" | "relatorios";
 type TaskStatus = "todo" | "doing" | "done";
 type TaskPriority = "alta" | "media" | "baixa";
+type WidgetId = "newTask" | "board" | "agenda" | "reports";
+type Accent = "cyan" | "violet" | "emerald" | "rose";
+type Density = "compacta" | "confortavel";
 
 type Task = {
   id: string;
@@ -30,6 +44,40 @@ type Task = {
 };
 
 const STORAGE_KEY = "dashboard-g-pro-tasks";
+const SETTINGS_KEY = "dashboard-g-pro-settings";
+
+type DashboardSettings = {
+  visibleWidgets: Record<WidgetId, boolean>;
+  widgetOrder: WidgetId[];
+  accent: Accent;
+  density: Density;
+};
+
+const defaultSettings: DashboardSettings = {
+  visibleWidgets: {
+    newTask: true,
+    board: true,
+    agenda: true,
+    reports: true,
+  },
+  widgetOrder: ["newTask", "board", "agenda", "reports"],
+  accent: "cyan",
+  density: "confortavel",
+};
+
+const widgetLabels: Record<WidgetId, string> = {
+  newTask: "Nova tarefa",
+  board: "Quadro Kanban",
+  agenda: "Agenda",
+  reports: "Relatorios",
+};
+
+const accentThemes: Record<Accent, { label: string; color: string; soft: string }> = {
+  cyan: { label: "Ciano", color: "#67e8f9", soft: "rgba(103,232,249,0.14)" },
+  violet: { label: "Violeta", color: "#a78bfa", soft: "rgba(167,139,250,0.14)" },
+  emerald: { label: "Verde", color: "#6ee7b7", soft: "rgba(110,231,183,0.14)" },
+  rose: { label: "Rosa", color: "#fda4af", soft: "rgba(253,164,175,0.14)" },
+};
 
 const initialTasks: Task[] = [
   {
@@ -239,9 +287,243 @@ function TaskCard({
   );
 }
 
+function CustomizationPanel({
+  settings,
+  setSettings,
+  toggleWidget,
+  moveWidget,
+  resetSettings,
+}: {
+  settings: DashboardSettings;
+  setSettings: Dispatch<SetStateAction<DashboardSettings>>;
+  toggleWidget: (id: WidgetId) => void;
+  moveWidget: (id: WidgetId, direction: -1 | 1) => void;
+  resetSettings: () => void;
+}) {
+  return (
+    <section className="mt-6 rounded-3xl border border-white/10 bg-slate-950/35 p-4">
+      <div className="flex items-center gap-2 text-slate-200">
+        <Settings2 size={16} />
+        <h2 className="text-sm font-black">Personalizar</h2>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-500">
+          Cor de destaque
+        </p>
+        <div className="mt-2 grid grid-cols-4 gap-2">
+          {(Object.keys(accentThemes) as Accent[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              title={accentThemes[key].label}
+              onClick={() =>
+                setSettings((current) => ({ ...current, accent: key }))
+              }
+              className={`h-9 rounded-xl border transition ${
+                settings.accent === key
+                  ? "border-white/70"
+                  : "border-white/10 hover:border-white/30"
+              }`}
+              style={{ background: accentThemes[key].color }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-500">
+          Densidade
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {(["confortavel", "compacta"] as Density[]).map((density) => (
+            <button
+              key={density}
+              type="button"
+              onClick={() =>
+                setSettings((current) => ({ ...current, density }))
+              }
+              className={`rounded-xl px-2 py-2 text-xs font-black capitalize transition ${
+                settings.density === density
+                  ? "bg-[var(--accent)] text-slate-950"
+                  : "bg-white/5 text-slate-400 hover:text-white"
+              }`}
+            >
+              {density}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-500">
+          Widgets do painel
+        </p>
+        <div className="mt-2 space-y-2">
+          {settings.widgetOrder.map((id, index) => (
+            <div
+              key={id}
+              className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2"
+            >
+              <button
+                type="button"
+                onClick={() => toggleWidget(id)}
+                className={`h-7 flex-1 rounded-xl px-2 text-left text-xs font-bold transition ${
+                  settings.visibleWidgets[id]
+                    ? "text-white"
+                    : "text-slate-600 line-through"
+                }`}
+              >
+                {widgetLabels[id]}
+              </button>
+              <button
+                type="button"
+                disabled={index === 0}
+                onClick={() => moveWidget(id, -1)}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-white/5 hover:text-white disabled:opacity-20"
+                aria-label="Subir widget"
+              >
+                <ArrowUp size={13} />
+              </button>
+              <button
+                type="button"
+                disabled={index === settings.widgetOrder.length - 1}
+                onClick={() => moveWidget(id, 1)}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-white/5 hover:text-white disabled:opacity-20"
+                aria-label="Descer widget"
+              >
+                <ArrowDown size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={resetSettings}
+        className="mt-4 w-full rounded-2xl border border-white/10 px-3 py-2 text-xs font-black text-slate-400 transition hover:border-white/25 hover:text-white"
+      >
+        Restaurar layout
+      </button>
+    </section>
+  );
+}
+
+function PersonalizedDashboard({
+  settings,
+  panelGap,
+  newTask,
+  setNewTask,
+  addTask,
+  filteredTasks,
+  agendaTasks,
+  tasks,
+  stats,
+  query,
+  setQuery,
+  priorityFilter,
+  setPriorityFilter,
+  updateStatus,
+  deleteTask,
+}: {
+  settings: DashboardSettings;
+  panelGap: string;
+  newTask: {
+    title: string;
+    client: string;
+    priority: TaskPriority;
+    dueDate: string;
+    estimate: number;
+  };
+  setNewTask: Dispatch<
+    SetStateAction<{
+      title: string;
+      client: string;
+      priority: TaskPriority;
+      dueDate: string;
+      estimate: number;
+    }>
+  >;
+  addTask: () => void;
+  filteredTasks: Task[];
+  agendaTasks: Task[];
+  tasks: Task[];
+  stats: {
+    total: number;
+    done: number;
+    doing: number;
+    todo: number;
+    overdue: number;
+    highPriority: number;
+    hours: number;
+    progress: number;
+  };
+  query: string;
+  setQuery: (value: string) => void;
+  priorityFilter: "todas" | TaskPriority;
+  setPriorityFilter: (value: "todas" | TaskPriority) => void;
+  updateStatus: (id: string, status: TaskStatus) => void;
+  deleteTask: (id: string) => void;
+}) {
+  const widgets: Record<WidgetId, ReactNode> = {
+    newTask: (
+      <NewTaskPanel
+        newTask={newTask}
+        setNewTask={setNewTask}
+        addTask={addTask}
+      />
+    ),
+    board: (
+      <TasksBoard
+        filteredTasks={filteredTasks}
+        query={query}
+        setQuery={setQuery}
+        priorityFilter={priorityFilter}
+        setPriorityFilter={setPriorityFilter}
+        updateStatus={updateStatus}
+        deleteTask={deleteTask}
+      />
+    ),
+    agenda: (
+      <AgendaMiniWidget
+        tasks={agendaTasks}
+        updateStatus={updateStatus}
+      />
+    ),
+    reports: <ReportsMiniWidget tasks={tasks} stats={stats} />,
+  };
+
+  const visibleOrder = settings.widgetOrder.filter(
+    (id) => settings.visibleWidgets[id],
+  );
+
+  if (visibleOrder.length === 0) {
+    return (
+      <div className={`rounded-[28px] border border-dashed border-white/10 bg-white/[0.045] p-10 text-center text-slate-500 ${panelGap}`}>
+        Nenhum widget ativo. Use o painel Personalizar para reativar widgets.
+      </div>
+    );
+  }
+
+  return (
+    <div className={`grid xl:grid-cols-2 ${panelGap}`}>
+      {visibleOrder.map((id) => (
+        <div
+          key={id}
+          className={id === "board" ? "xl:col-span-2" : undefined}
+        >
+          {widgets[id]}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<View>("painel");
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [settings, setSettings] = useState<DashboardSettings>(defaultSettings);
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<"todas" | TaskPriority>(
     "todas",
@@ -269,8 +551,34 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const stored = window.localStorage.getItem(SETTINGS_KEY);
+    if (!stored) return;
+
+    try {
+      const parsed = JSON.parse(stored) as Partial<DashboardSettings>;
+      setSettings({
+        visibleWidgets: {
+          ...defaultSettings.visibleWidgets,
+          ...parsed.visibleWidgets,
+        },
+        widgetOrder: parsed.widgetOrder?.length
+          ? parsed.widgetOrder.filter((id): id is WidgetId => id in widgetLabels)
+          : defaultSettings.widgetOrder,
+        accent: parsed.accent ?? defaultSettings.accent,
+        density: parsed.density ?? defaultSettings.density,
+      });
+    } catch {
+      window.localStorage.removeItem(SETTINGS_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   }, [tasks]);
+
+  useEffect(() => {
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings]);
 
   const filteredTasks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -347,10 +655,54 @@ export default function App() {
     setTasks((current) => current.filter((task) => task.id !== id));
   }
 
+  function toggleWidget(id: WidgetId) {
+    setSettings((current) => ({
+      ...current,
+      visibleWidgets: {
+        ...current.visibleWidgets,
+        [id]: !current.visibleWidgets[id],
+      },
+    }));
+  }
+
+  function moveWidget(id: WidgetId, direction: -1 | 1) {
+    setSettings((current) => {
+      const order = [...current.widgetOrder];
+      const index = order.indexOf(id);
+      const nextIndex = index + direction;
+
+      if (index < 0 || nextIndex < 0 || nextIndex >= order.length) {
+        return current;
+      }
+
+      const [item] = order.splice(index, 1);
+      order.splice(nextIndex, 0, item);
+
+      return {
+        ...current,
+        widgetOrder: order,
+      };
+    });
+  }
+
+  function resetSettings() {
+    setSettings(defaultSettings);
+  }
+
   const activeTitle = navItems.find((item) => item.id === activeView)?.label;
+  const accent = accentThemes[settings.accent];
+  const panelGap = settings.density === "compacta" ? "mt-4 gap-4" : "mt-5 gap-5";
 
   return (
-    <main className="min-h-screen bg-[#070a12] text-slate-100">
+    <main
+      className="min-h-screen bg-[#070a12] text-slate-100"
+      style={
+        {
+          "--accent": accent.color,
+          "--accent-soft": accent.soft,
+        } as CSSProperties
+      }
+    >
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(34,211,238,0.18),transparent_28%),radial-gradient(circle_at_82%_4%,rgba(132,92,246,0.16),transparent_30%),linear-gradient(135deg,rgba(8,13,28,0.98),rgba(3,7,18,1))]" />
         <div className="absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:48px_48px]" />
@@ -359,7 +711,7 @@ export default function App() {
       <div className="relative mx-auto flex min-h-screen w-full max-w-[1480px] gap-5 px-4 py-4 lg:px-6">
         <aside className="hidden w-72 shrink-0 flex-col rounded-[28px] border border-white/10 bg-white/[0.045] p-5 shadow-2xl shadow-black/30 lg:flex">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent)] text-slate-950 shadow-lg shadow-cyan-400/20">
               <LayoutDashboard size={22} />
             </div>
             <div>
@@ -376,7 +728,7 @@ export default function App() {
                 onClick={() => setActiveView(id)}
                 className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${
                   activeView === id
-                    ? "bg-cyan-400 text-slate-950"
+                    ? "bg-[var(--accent)] text-slate-950"
                     : "text-slate-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
@@ -386,8 +738,16 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="mt-auto rounded-3xl border border-cyan-300/20 bg-cyan-300/10 p-4">
-            <div className="flex items-center gap-2 text-cyan-200">
+          <CustomizationPanel
+            settings={settings}
+            setSettings={setSettings}
+            toggleWidget={toggleWidget}
+            moveWidget={moveWidget}
+            resetSettings={resetSettings}
+          />
+
+          <div className="mt-5 rounded-3xl border border-white/10 bg-[var(--accent-soft)] p-4">
+            <div className="flex items-center gap-2" style={{ color: accent.color }}>
               <Sparkles size={16} />
               <span className="text-xs font-black uppercase tracking-[0.18em]">
                 Sprint ativo
@@ -400,7 +760,7 @@ export default function App() {
             </p>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-cyan-300"
+                className="h-full rounded-full bg-[var(--accent)]"
                 style={{ width: `${stats.progress}%` }}
               />
             </div>
@@ -451,7 +811,7 @@ export default function App() {
                   onClick={() => setActiveView(id)}
                   className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-black transition ${
                     activeView === id
-                      ? "bg-cyan-400 text-slate-950"
+                      ? "bg-[var(--accent)] text-slate-950"
                       : "bg-white/5 text-slate-400"
                   }`}
                 >
@@ -463,26 +823,27 @@ export default function App() {
           </header>
 
           {activeView === "painel" && (
-            <div className="mt-5 grid gap-5 xl:grid-cols-[380px_1fr]">
-              <NewTaskPanel
-                newTask={newTask}
-                setNewTask={setNewTask}
-                addTask={addTask}
-              />
-              <TasksBoard
-                filteredTasks={filteredTasks}
-                query={query}
-                setQuery={setQuery}
-                priorityFilter={priorityFilter}
-                setPriorityFilter={setPriorityFilter}
-                updateStatus={updateStatus}
-                deleteTask={deleteTask}
-              />
-            </div>
+            <PersonalizedDashboard
+              settings={settings}
+              panelGap={panelGap}
+              newTask={newTask}
+              setNewTask={setNewTask}
+              addTask={addTask}
+              filteredTasks={filteredTasks}
+              agendaTasks={agendaTasks}
+              tasks={tasks}
+              stats={stats}
+              query={query}
+              setQuery={setQuery}
+              priorityFilter={priorityFilter}
+              setPriorityFilter={setPriorityFilter}
+              updateStatus={updateStatus}
+              deleteTask={deleteTask}
+            />
           )}
 
           {activeView === "tarefas" && (
-            <div className="mt-5 grid gap-5 xl:grid-cols-[380px_1fr]">
+            <div className={`grid xl:grid-cols-[380px_1fr] ${panelGap}`}>
               <NewTaskPanel
                 newTask={newTask}
                 setNewTask={setNewTask}
@@ -527,8 +888,8 @@ function NewTaskPanel({
     dueDate: string;
     estimate: number;
   };
-  setNewTask: React.Dispatch<
-    React.SetStateAction<{
+  setNewTask: Dispatch<
+    SetStateAction<{
       title: string;
       client: string;
       priority: TaskPriority;
@@ -790,6 +1151,114 @@ function TasksBoard({
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+function AgendaMiniWidget({
+  tasks,
+  updateStatus,
+}: {
+  tasks: Task[];
+  updateStatus: (id: string, status: TaskStatus) => void;
+}) {
+  const openTasks = tasks.filter((task) => task.status !== "done").slice(0, 5);
+
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-black">Agenda</h2>
+          <p className="text-sm text-slate-400">Proximos prazos abertos.</p>
+        </div>
+        <CalendarDays className="text-[var(--accent)]" size={20} />
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {openTasks.map((task) => (
+          <div
+            key={task.id}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3"
+          >
+            <div className="min-w-0">
+              <p className={`text-xs font-black ${dueTone(task)}`}>
+                {dueLabel(task)} - {formatDate(task.dueDate)}
+              </p>
+              <h3 className="mt-1 truncate text-sm font-black">{task.title}</h3>
+              <p className="mt-1 truncate text-xs text-slate-500">
+                {task.client}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => updateStatus(task.id, nextStatus(task.status))}
+              className="shrink-0 rounded-xl bg-[var(--accent-soft)] px-3 py-2 text-xs font-black text-slate-100"
+            >
+              Avancar
+            </button>
+          </div>
+        ))}
+
+        {openTasks.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-600">
+            Sem entregas abertas.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ReportsMiniWidget({
+  stats,
+}: {
+  tasks: Task[];
+  stats: {
+    total: number;
+    done: number;
+    doing: number;
+    todo: number;
+    overdue: number;
+    highPriority: number;
+    hours: number;
+    progress: number;
+  };
+}) {
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-black">Relatorios</h2>
+          <p className="text-sm text-slate-400">Resumo do sprint atual.</p>
+        </div>
+        <BarChart3 className="text-[var(--accent)]" size={20} />
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        {[
+          ["Progresso", `${stats.progress}%`],
+          ["Atrasadas", stats.overdue],
+          ["Alta prioridade", stats.highPriority],
+          ["Horas abertas", `${stats.hours}h`],
+        ].map(([label, value]) => (
+          <div
+            key={String(label)}
+            className="rounded-2xl border border-white/10 bg-slate-950/40 p-4"
+          >
+            <p className="text-2xl font-black">{value}</p>
+            <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-[var(--accent)]"
+          style={{ width: `${stats.progress}%` }}
+        />
       </div>
     </section>
   );
