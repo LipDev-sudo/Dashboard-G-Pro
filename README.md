@@ -1,6 +1,15 @@
 # Dashboard G-Pro
 
-Dashboard de gestao profissional com interface moderna e visualizacao de dados em tempo real.
+Organizador de tarefas profissional para freelancers e pequenas equipes.
+
+## Funcionalidades
+
+- Quadro Kanban com etapas: A Fazer, Em Progresso e Concluido
+- Cadastro rapido de tarefas com cliente/projeto, prazo, prioridade e estimativa
+- Filtro por prioridade e busca por tarefa ou cliente
+- Indicadores de progresso, horas abertas e entregas concluidas
+- Persistencia local com `localStorage`, sem login obrigatorio
+- Interface responsiva para desktop e mobile
 
 ## Tecnologias
 
@@ -8,25 +17,24 @@ Dashboard de gestao profissional com interface moderna e visualizacao de dados e
 - TypeScript
 - Vite
 - Tailwind CSS
+- Lucide React
 
-## Como rodar
+## Como Rodar
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Funcionalidades
+## Build
 
-- Painel de metricas e KPIs
-- Graficos interativos
-- Layout responsivo
-- Interface limpa e intuitiva
-- Componentes reutilizaveis
+```bash
+npm run build
+```
 
 ## Autor
 
-**Hamilton Felipe Soares da Silva** - [LipDev.BR](https://github.com/LipDev-sudo)
+Hamilton Felipe Soares da Silva - [LipDev.BR](https://github.com/LipDev-sudo)
 
 ## Licenca
 

@@ -1,5 +1,5 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "dashboard-g-pro",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -71,7 +71,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "4.7.0",
     "tailwindcss": "4.1.12",
-    "vite": "6.3.5"
+    "vite": "^6.4.3"
   },
   "peerDependencies": {
     "react": "^18.3.1",
@@ -85,9 +85,5 @@
       "optional": true
     }
   },
-  "pnpm": {
-    "overrides": {
-      "vite": "6.3.5"
-    }
-  }
+  "description": "Organizador de tarefas profissional para freelancers e pequenas equipes."
 }
